@@ -147,6 +147,7 @@
     opacity:.5;
   }
   n8n-demo{display:block;width:100%;height:auto;min-height:clamp(360px,48vh,520px);--n8n-workflow-min-height:clamp(360px,48vh,520px)}
+  @media(max-width:640px){n8n-demo{min-height:clamp(320px,55vw,420px);--n8n-workflow-min-height:clamp(320px,55vw,420px)}}
   #wf-fallback{display:none;padding:48px 26px;text-align:center;color:var(--ink-soft)}
   #wf-fallback a{color:var(--coral-deep);font-weight:700}
   #wf-loading{
@@ -324,7 +325,7 @@
       </div>
       <div class="stage">
         <div id="wf-loading"><span class="spin"></span> loading workflow preview…</div>
-        <n8n-demo id="wf" frame="true" clicktointeract="true" collapseformobile="true" theme="light"></n8n-demo>
+        <n8n-demo id="wf" frame="true" clicktointeract="true" theme="light"></n8n-demo>
         <div id="wf-fallback">
           <p>The interactive preview couldn’t load (it needs to be served over the web).<br>
           You can still <a href="workflow.json" download="daily-digest-workflow.json">download the workflow JSON</a> and import it into n8n.</p>
