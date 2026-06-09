@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Daily Digest · Read Later → Inbox — n8n template</title>
+<meta name="description" content="An n8n workflow that turns your Raindrop.io read-later list into a clean, categorised daily digest email. Scrapes with Firecrawl, summarises with an LLM via OpenRouter, delivers via Gmail." />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Daily Digest · Read Later → Inbox" />
+<meta property="og:description" content="Turn your Raindrop.io read-later list into a categorised daily digest email — built with n8n, Firecrawl and OpenRouter." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- n8n read-only workflow preview component -->
+<script src="https://cdn.jsdelivr.net/npm/@n8n_io/n8n-demo-component/n8n-demo.bundled.js"></script>
+
+<style>
+  :root{
+    --paper:#f7f1e8;
+    --paper-2:#efe6d8;
+    --ink:#1c1714;
+    --ink-soft:#5b5248;
+    --ink-faint:#8c8175;
+    --line:#ddd0bd;
+    --coral:#ea4b71;
+    --coral-deep:#c5305a;
+    --plum:#3a2740;
+    --gold:#caa24a;
+    --teal:#2f8f83;
+    --blue:#4a73c4;
+    --radius:18px;
+    --maxw:1180px;
+    --shadow:0 1px 0 #fff8 inset, 0 24px 60px -32px rgba(28,23,20,.45);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Hanken Grotesk",-apple-system,system-ui,sans-serif;
+    font-size:17px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    /* layered atmosphere: warm radial glow + faint grain */
+    background-image:
+      radial-gradient(1100px 700px at 85% -8%, rgba(234,75,113,.12), transparent 60%),
+      radial-gradient(900px 600px at -5% 12%, rgba(58,39,64,.10), transparent 55%);
+    background-attachment:fixed;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+  }
+  .wrap{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto;padding:0 28px}
+
+  a{color:inherit}
+  ::selection{background:var(--coral);color:#fff}
+
+  /* ---------- Top bar ---------- */
+  header.bar{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:saturate(1.4) blur(10px);
+    background:linear-gradient(var(--paper), rgba(247,241,232,.78));
+    border-bottom:1px solid var(--line);
+  }
+  .bar-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;height:62px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.01em}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px rgba(234,75,113,.18)}
+  .brand small{font-family:"JetBrains Mono",monospace;font-weight:500;color:var(--ink-faint);font-size:12px;letter-spacing:.02em}
+  .bar-links{display:flex;align-items:center;gap:24px;font-size:14.5px}
+  .bar-links a{text-decoration:none;color:var(--ink-soft);font-weight:600}
+  .bar-links a:hover{color:var(--ink)}
+  .bar-links .gh{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);padding:7px 13px;border-radius:999px;background:#fff8}
+  .bar-links .gh:hover{border-color:var(--ink);background:#fff}
+  @media(max-width:640px){.bar-links a.hide-sm{display:none}}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:72px 0 30px;position:relative}
+  .kicker{
+    display:inline-flex;align-items:center;gap:10px;
+    font-family:"JetBrains Mono",monospace;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--coral-deep);font-weight:600;margin-bottom:22px;
+  }
+  .kicker::before{content:"";width:30px;height:1px;background:var(--coral)}
+  h1{
+    font-family:"Fraunces",serif;font-weight:600;font-optical-sizing:auto;
+    font-size:clamp(44px,7.2vw,88px);line-height:.98;letter-spacing:-.025em;margin:0 0 22px;
+    max-width:15ch;
+  }
+  h1 em{font-style:italic;color:var(--coral-deep);font-weight:500}
+  .deck{font-size:clamp(18px,2.4vw,23px);color:var(--ink-soft);max-width:60ch;margin:0 0 30px;line-height:1.5}
+  .deck b{color:var(--ink);font-weight:600}
+
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:34px}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:13.5px;font-weight:600;color:var(--ink-soft);
+    background:#fff9;border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+  }
+  .chip .ico{font-size:15px}
+
+  .cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    font-weight:700;font-size:15.5px;text-decoration:none;
+    padding:14px 22px;border-radius:12px;border:1px solid transparent;cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .btn-primary{background:var(--ink);color:var(--paper);box-shadow:0 12px 28px -14px rgba(28,23,20,.7)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 36px -16px rgba(28,23,20,.8)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn-ghost:hover{border-color:var(--ink);background:#fff8}
+
+  /* staggered entrance */
+  .reveal{opacity:0;transform:translateY(14px);animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.05s}.d2{animation-delay:.14s}.d3{animation-delay:.23s}.d4{animation-delay:.32s}.d5{animation-delay:.41s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.reveal{animation:none;opacity:1;transform:none}}
+
+  /* ---------- Widget ---------- */
+  .stage-section{padding:18px 0 8px}
+  .stage-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 14px}
+  .stage-head h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(24px,3vw,32px);margin:0;letter-spacing:-.02em}
+  .stage-hint{font-size:13px;color:var(--ink-faint);font-family:"JetBrains Mono",monospace}
+  .stage{
+    position:relative;border-radius:var(--radius);overflow:hidden;
+    border:1px solid var(--line);background:#fff;box-shadow:var(--shadow);
+  }
+  .stage::before{ /* tiny corner ticks for a "blueprint" feel */
+    content:"";position:absolute;inset:10px;border-radius:12px;pointer-events:none;z-index:2;
+    background:
+      linear-gradient(var(--coral),var(--coral)) 0 0/14px 1px no-repeat,
+      linear-gradient(var(--coral),var(--coral)) 0 0/1px 14px no-repeat,
+      linear-gradient(var(--coral),var(--coral)) 100% 100%/14px 1px no-repeat,
+      linear-gradient(var(--coral),var(--coral)) 100% 100%/1px 14px no-repeat;
+    opacity:.5;
+  }
+  n8n-demo{display:block;width:100%;height:min(80vh,820px);min-height:520px}
+  #wf-fallback{display:none;padding:48px 26px;text-align:center;color:var(--ink-soft)}
+  #wf-fallback a{color:var(--coral-deep);font-weight:700}
+  #wf-loading{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:12px;
+    color:var(--ink-faint);font-family:"JetBrains Mono",monospace;font-size:13px;z-index:1;
+    background:repeating-linear-gradient(45deg,#fbf6ee,#fbf6ee 14px,#f5ecdf 14px,#f5ecdf 28px);
+  }
+  .spin{width:15px;height:15px;border:2px solid var(--line);border-top-color:var(--coral);border-radius:50%;animation:sp 0.8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ---------- Generic section ---------- */
+  section.block{padding:72px 0;border-top:1px solid var(--line);margin-top:60px}
+  .sec-label{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--coral-deep);font-weight:600;margin-bottom:14px}
+  section.block > .wrap > h2{
+    font-family:"Fraunces",serif;font-weight:600;font-size:clamp(30px,4.4vw,46px);
+    letter-spacing:-.025em;margin:0 0 16px;line-height:1.04;
+  }
+  section.block > .wrap > p.lead{font-size:19px;color:var(--ink-soft);max-width:64ch;margin:0 0 44px}
+
+  /* ---------- Pipeline ---------- */
+  .pipe{display:grid;gap:0;counter-reset:step}
+  .step{
+    position:relative;display:grid;grid-template-columns:64px 1fr;gap:24px;
+    padding:26px 0;border-top:1px dashed var(--line);
+  }
+  .step:first-child{border-top:none}
+  .step .num{
+    counter-increment:step;
+    font-family:"Fraunces",serif;font-size:30px;font-weight:600;color:var(--ink);
+    width:54px;height:54px;border-radius:14px;display:grid;place-items:center;
+    background:#fff;border:1px solid var(--line);box-shadow:0 8px 18px -14px rgba(28,23,20,.5);
+  }
+  .step[data-c=coral] .num{color:var(--coral-deep);border-color:#f0c4cf;background:#fff4f6}
+  .step[data-c=blue]  .num{color:var(--blue);border-color:#c9d6f0;background:#f3f6fd}
+  .step[data-c=teal]  .num{color:var(--teal);border-color:#bfe0da;background:#f0faf7}
+  .step[data-c=gold]  .num{color:#9c7820;border-color:#e7d49f;background:#fcf6e4}
+  .step[data-c=plum]  .num{color:var(--plum);border-color:#d6c6dd;background:#f8f2fb}
+  .step .num::after{content:counter(step,decimal-leading-zero)}
+  .step h3{margin:6px 0 7px;font-size:20px;font-weight:700;letter-spacing:-.01em;font-family:"Hanken Grotesk"}
+  .step p{margin:0;color:var(--ink-soft);font-size:16px;max-width:70ch}
+  .step .nodes{margin-top:12px;display:flex;flex-wrap:wrap;gap:7px}
+  .node-tag{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:3px 9px}
+  @media(max-width:560px){.step{grid-template-columns:46px 1fr;gap:16px}.step .num{width:44px;height:44px;font-size:23px}}
+
+  /* ---------- Service cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+  .card{
+    position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;
+    box-shadow:0 18px 40px -30px rgba(28,23,20,.5);transition:transform .18s ease,border-color .18s ease;
+  }
+  .card:hover{transform:translateY(-3px);border-color:var(--coral)}
+  .card .glyph{font-size:26px;margin-bottom:14px;display:block}
+  .card h3{margin:0 0 6px;font-size:18px;font-weight:700}
+  .card .req{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--coral-deep);font-weight:600;display:block;margin-bottom:12px}
+  .card .req.opt{color:var(--ink-faint)}
+  .card p{margin:0 0 14px;font-size:14.5px;color:var(--ink-soft)}
+  .card a.link{font-size:13.5px;font-weight:700;text-decoration:none;color:var(--ink);border-bottom:2px solid var(--coral);padding-bottom:1px}
+  .card a.link:hover{color:var(--coral-deep)}
+
+  /* ---------- Setup steps ---------- */
+  .setup{display:grid;gap:22px;counter-reset:s}
+  .su{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;padding-bottom:22px;border-bottom:1px solid var(--line)}
+  .su:last-child{border-bottom:none}
+  .su .b{counter-increment:s;font-family:"JetBrains Mono",monospace;font-weight:600;font-size:13px;color:#fff;background:var(--ink);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;margin-top:3px}
+  .su .b::after{content:counter(s)}
+  .su h3{margin:2px 0 8px;font-size:18.5px;font-weight:700}
+  .su p{margin:0 0 12px;color:var(--ink-soft);font-size:15.5px}
+  .su p:last-child{margin-bottom:0}
+  .su a{color:var(--coral-deep);font-weight:600;text-decoration:none;border-bottom:1px solid rgba(197,48,90,.3)}
+  .su a:hover{border-color:var(--coral-deep)}
+  code,pre{font-family:"JetBrains Mono",monospace}
+  code.inline{background:var(--paper-2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13.5px}
+  pre{
+    background:var(--plum);color:#f3e9ef;border-radius:12px;padding:16px 18px;overflow-x:auto;
+    font-size:13px;line-height:1.7;margin:6px 0 0;border:1px solid #2a1c30;
+  }
+  pre .k{color:#ffb3c8}
+  .tabs-note{font-size:14px;color:var(--ink-soft);background:#fff;border:1px dashed var(--line);border-radius:12px;padding:16px 18px;margin-top:8px}
+  .tabs-note strong{color:var(--ink)}
+
+  /* ---------- Callout ---------- */
+  .callout{
+    display:flex;gap:16px;align-items:flex-start;
+    background:linear-gradient(120deg,#fff7f3,#fdeef0);
+    border:1px solid #f0c9d2;border-left:4px solid var(--coral);
+    border-radius:14px;padding:20px 22px;margin:8px 0 0;
+  }
+  .callout .ci{font-size:22px;line-height:1}
+  .callout p{margin:0;font-size:15px;color:#7a3247}
+  .callout strong{color:var(--coral-deep)}
+
+  /* ---------- Inbox preview ---------- */
+  .inbox{padding:72px 0;border-top:1px solid var(--line);margin-top:60px}
+  .inbox-grid{display:grid;grid-template-columns:1fr 1.04fr;gap:54px;align-items:start}
+  @media(max-width:860px){.inbox-grid{grid-template-columns:1fr;gap:34px}}
+  .inbox-copy .sec-label{margin-bottom:14px}
+  .inbox-copy h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(30px,4.4vw,46px);letter-spacing:-.025em;margin:0 0 16px;line-height:1.04}
+  .inbox-copy .lead{font-size:19px;color:var(--ink-soft);margin:0 0 28px;max-width:46ch}
+  .feat{list-style:none;margin:0;padding:0;display:grid;gap:18px}
+  .feat li{display:grid;grid-template-columns:auto 1fr;gap:14px;font-size:15.5px;color:var(--ink-soft);line-height:1.5}
+  .feat li b{color:var(--ink)}
+  .feat .fi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#fff4f6;border:1px solid #f0c4cf;font-size:16px}
+  .mock{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:0 44px 90px -44px rgba(28,23,20,.6);margin:0}
+  .mock .chrome{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+  .mock .chrome i{width:11px;height:11px;border-radius:50%;background:#d9ccb8;display:block}
+  .mock .chrome i:first-child{background:#e8897f}
+  .mock .chrome .subj{margin-left:12px;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mock .shot{position:relative;max-height:660px;overflow:hidden}
+  .mock .shot img{display:block;width:100%;height:auto}
+  .mock .shot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:130px;background:linear-gradient(transparent,#fff);pointer-events:none}
+  .mock .more{position:absolute;bottom:13px;left:0;right:0;text-align:center;font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.04em;color:var(--ink-faint);z-index:2}
+
+  /* ---------- Footer ---------- */
+  footer{border-top:1px solid var(--line);margin-top:72px;padding:48px 0 64px;background:linear-gradient(transparent,rgba(58,39,64,.04))}
+  .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:22px;align-items:center}
+  .foot .fb{display:flex;align-items:center;gap:11px;font-family:"Fraunces",serif;font-size:20px;font-weight:600}
+  .foot .fb .dot{width:9px;height:9px;border-radius:50%;background:var(--coral)}
+  .foot p{margin:0;color:var(--ink-faint);font-size:14px}
+  .foot a{color:var(--ink-soft);text-decoration:none;font-weight:600}
+  .foot a:hover{color:var(--coral-deep)}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-inner">
+    <div class="brand"><span class="dot"></span> n8n&nbsp;templates <small>/ 01 · daily-digest</small></div>
+    <nav class="bar-links">
+      <a href="#how" class="hide-sm">How it works</a>
+      <a href="#need" class="hide-sm">Requirements</a>
+      <a href="#setup" class="hide-sm">Setup</a>
+      <a class="gh" href="https://github.com/timgranlundmarsden/n8n-workflow-templates" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="kicker reveal d1">n8n workflow template</div>
+      <h1 class="reveal d2">Your read&#8209;later pile,<br><em>delivered</em> every morning.</h1>
+      <p class="deck reveal d3"><b>Daily Digest</b> pulls the articles you saved to Raindrop.io that you didn’t have time to read, scrapes each one with Firecrawl, writes a tight three&#8209;point summary with an LLM via OpenRouter, and emails you a clean, categorised digest — automatically, before breakfast.</p>
+      <div class="chips reveal d4">
+        <span class="chip"><span class="ico">⏰</span> Runs daily · 06:00</span>
+        <span class="chip"><span class="ico">🌧️</span> Raindrop.io</span>
+        <span class="chip"><span class="ico">🔥</span> Firecrawl scrape</span>
+        <span class="chip"><span class="ico">✦</span> OpenRouter LLM</span>
+        <span class="chip"><span class="ico">📊</span> Google Sheets</span>
+        <span class="chip"><span class="ico">✉️</span> Gmail delivery</span>
+      </div>
+      <div class="cta reveal d5">
+        <a class="btn btn-primary" href="workflow.json" download="daily-digest.workflow.json">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
+          Download workflow.json
+        </a>
+        <a class="btn btn-ghost" href="#setup">Read the setup guide →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- WIDGET -->
+  <section class="stage-section">
+    <div class="wrap">
+      <div class="stage-head">
+        <h2>The workflow, live</h2>
+        <span class="stage-hint">drag to pan · scroll to zoom · click a node</span>
+      </div>
+      <div class="stage">
+        <div id="wf-loading"><span class="spin"></span> loading workflow preview…</div>
+        <n8n-demo id="wf" frame="true" clicktointeract="true" collapseformobile="true" theme="light"></n8n-demo>
+        <div id="wf-fallback">
+          <p>The interactive preview couldn’t load (it needs to be served over the web).<br>
+          You can still <a href="workflow.json" download>download the workflow JSON</a> and import it into n8n.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INBOX PREVIEW -->
+  <section class="inbox">
+    <div class="wrap inbox-grid">
+      <div class="inbox-copy">
+        <div class="sec-label">The payoff</div>
+        <h2>What lands in your inbox</h2>
+        <p class="lead">Every morning you get one scannable email — your saved articles grouped by theme, each distilled to a hook, three takeaways and a few tags. No app to open, no backlog guilt.</p>
+        <ul class="feat">
+          <li><span class="fi">🗂️</span><div><b>Grouped by category.</b> AI Engineering, Security, Culture and more — auto&#8209;sorted from each article’s topic and tags.</div></li>
+          <li><span class="fi">⚡</span><div><b>One&#8209;line hook + three takeaways.</b> The gist of every piece in seconds, with an estimated reading time.</div></li>
+          <li><span class="fi">🔗</span><div><b>Source, link and tags.</b> Jump straight to the original whenever something’s worth the full read.</div></li>
+        </ul>
+      </div>
+      <figure class="mock">
+        <div class="chrome"><i></i><i></i><i></i><span class="subj">Daily Digest To Read — Saturday</span></div>
+        <div class="shot">
+          <img src="img/digest-example.png" width="1052" height="1658" loading="lazy" decoding="async"
+               alt="Example Daily Digest email titled ‘AI Engineering & Security Research Digest’, with article cards each showing a title, source, reading time, a one-line summary, three bullet takeaways, a source link and hashtags." />
+          <span class="more">↓ the email continues…</span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="block" id="how">
+    <div class="wrap">
+      <div class="sec-label">The pipeline</div>
+      <h2>How it works, end to end</h2>
+      <p class="lead">Seven stages take you from a saved bookmark to a styled email in your inbox. Each box in the canvas above maps to a step below.</p>
+
+      <div class="pipe">
+        <div class="step" data-c="blue">
+          <div class="num"></div>
+          <div>
+            <h3>Trigger — schedule or on demand</h3>
+            <p>A schedule trigger fires every morning at <strong>06:00</strong> for an incremental run. A manual trigger lets you run on demand, and passing <code class="inline">fullSync=true</code> reprocesses everything for a complete refresh.</p>
+            <div class="nodes"><span class="node-tag">Schedule Trigger</span><span class="node-tag">Manual Trigger</span></div>
+          </div>
+        </div>
+
+        <div class="step" data-c="teal">
+          <div class="num"></div>
+          <div>
+            <h3>Configure &amp; reset</h3>
+            <p>Workflow variables set the run timestamp, the base path and your Raindrop collection. The Raindrop and Summaries tabs of the tracking sheet are then cleared so the run starts from a clean slate.</p>
+            <div class="nodes"><span class="node-tag">Set Workflow Variables</span><span class="node-tag">Clear sheet</span></div>
+          </div>
+        </div>
+
+        <div class="step" data-c="coral">
+          <div class="num"></div>
+          <div>
+            <h3>Fetch bookmarks from Raindrop.io</h3>
+            <p>Connects to your Raindrop account and pulls the bookmarks from a chosen collection — returning the title, URL and metadata for each saved article.</p>
+            <div class="nodes"><span class="node-tag">Get many bookmarks</span></div>
+          </div>
+        </div>
+
+        <div class="step" data-c="gold">
+          <div class="num"></div>
+          <div>
+            <h3>Scrape each article</h3>
+            <p>The engine of the workflow: it loops one article at a time, extracts the URL, and uses <strong>Firecrawl</strong> to scrape the page into clean markdown. Failures are skipped gracefully so one bad site never stops the run. Results are written to Google Sheets.</p>
+            <div class="nodes"><span class="node-tag">Loop Over Items</span><span class="node-tag">Firecrawl scrape</span><span class="node-tag">Save to Google Sheets</span></div>
+          </div>
+        </div>
+
+        <div class="step" data-c="gold">
+          <div class="num"></div>
+          <div>
+            <h3>Summarise with AI</h3>
+            <p>Each scraped article is sent to an LLM via <strong>OpenRouter</strong>, which produces a compact HTML block: a one&#8209;line hook, three key takeaways, reading&#8209;time estimate, source and tags — colour&#8209;coded by topic.</p>
+            <div class="nodes"><span class="node-tag">Article Summary (AI)</span><span class="node-tag">OpenRouter Chat Model</span><span class="node-tag">Save to Google Sheets</span></div>
+          </div>
+        </div>
+
+        <div class="step" data-c="plum">
+          <div class="num"></div>
+          <div>
+            <h3>Assemble the digest</h3>
+            <p>All the summaries are gathered and handed to a second OpenRouter&#8209;powered agent that groups articles into categories (AI, Security, Culture…), adds a header, section titles and footer — <strong>without altering the article blocks</strong> — into one email&#8209;ready HTML document.</p>
+            <div class="nodes"><span class="node-tag">Email Digest Creator (AI)</span><span class="node-tag">OpenRouter Chat Model</span></div>
+          </div>
+        </div>
+
+        <div class="step" data-c="coral">
+          <div class="num"></div>
+          <div>
+            <h3>Send it to your inbox</h3>
+            <p>The finished digest is sent via <strong>Gmail</strong> with a dated subject line. The tracking sheets are cleared on the next run, so every morning’s email covers only what’s new.</p>
+            <div class="nodes"><span class="node-tag">Send a message (Gmail)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REQUIREMENTS -->
+  <section class="block" id="need">
+    <div class="wrap">
+      <div class="sec-label">Before you start</div>
+      <h2>What you’ll need</h2>
+      <p class="lead">A running n8n instance plus a handful of accounts and API keys. Most have generous free tiers. Wire each one up as an n8n credential and select it on the matching node.</p>
+
+      <div class="cards">
+        <div class="card">
+          <span class="glyph">🧩</span>
+          <span class="req">Required</span>
+          <h3>n8n</h3>
+          <p>Runs on <a class="link" href="https://n8n.io/" target="_blank" rel="noopener">n8n Cloud</a> (the hosted SaaS) out of the box — no self&#8209;hosting required. A self&#8209;hosted instance works too if you prefer to run your own.</p>
+          <a class="link" href="https://docs.n8n.io/hosting/" target="_blank" rel="noopener">Install n8n →</a>
+        </div>
+
+        <div class="card">
+          <span class="glyph">🌧️</span>
+          <span class="req">Required</span>
+          <h3>Raindrop.io</h3>
+          <p>Your read&#8209;later source. Create a free account, save articles into a collection, and generate an API <em>test token</em> for n8n to read them.</p>
+          <a class="link" href="https://app.raindrop.io/settings/integrations" target="_blank" rel="noopener">Get API token →</a>
+        </div>
+
+        <div class="card">
+          <span class="glyph">🔥</span>
+          <span class="req">Required</span>
+          <h3>Firecrawl</h3>
+          <p>Turns each article URL into clean markdown. Use the hosted API key, or point the node at your own self&#8209;hosted Firecrawl instance.</p>
+          <a class="link" href="https://www.firecrawl.dev/" target="_blank" rel="noopener">Get Firecrawl key →</a>
+        </div>
+
+        <div class="card">
+          <span class="glyph">✦</span>
+          <span class="req">Required</span>
+          <h3>OpenRouter</h3>
+          <p>Routes the summary and digest prompts to an LLM. One key unlocks many models — this template points at a Google Gemini model, but you can swap in any other.</p>
+          <a class="link" href="https://openrouter.ai/keys" target="_blank" rel="noopener">Get OpenRouter key →</a>
+        </div>
+
+        <div class="card">
+          <span class="glyph">📊</span>
+          <span class="req">Required</span>
+          <h3>Google Sheets</h3>
+          <p>Used as working storage for scrapes, summaries and digests. Connect via OAuth2 and create one spreadsheet with three tabs (see setup).</p>
+          <a class="link" href="https://docs.n8n.io/integrations/builtin/credentials/google/" target="_blank" rel="noopener">Connect Google →</a>
+        </div>
+
+        <div class="card">
+          <span class="glyph">✉️</span>
+          <span class="req">Required</span>
+          <h3>Gmail</h3>
+          <p>Delivers the final digest. Connect a Gmail account through n8n’s OAuth2 credential and set your own recipient address on the send node.</p>
+          <a class="link" href="https://docs.n8n.io/integrations/builtin/credentials/google/oauth-single-service/" target="_blank" rel="noopener">Connect Gmail →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="block" id="setup">
+    <div class="wrap">
+      <div class="sec-label">Step by step</div>
+      <h2>Setting it up</h2>
+      <p class="lead">Import the workflow, connect the six credentials, and fill in the two placeholders. About fifteen minutes from zero to your first digest.</p>
+
+      <div class="setup">
+        <div class="su">
+          <div class="b"></div>
+          <div>
+            <h3>Import the workflow</h3>
+            <p><a href="workflow.json" download>Download <code class="inline">workflow.json</code></a>, then in <a href="https://n8n.io/" target="_blank" rel="noopener">n8n</a> choose <strong>Workflows → Import from File</strong>. The canvas’ sticky notes mirror the guidance on this page.</p>
+          </div>
+        </div>
+
+        <div class="su">
+          <div class="b"></div>
+          <div>
+            <h3>Connect <a href="https://raindrop.io/" target="_blank" rel="noopener">Raindrop.io</a></h3>
+            <p>Open <a href="https://app.raindrop.io/settings/integrations" target="_blank" rel="noopener">Raindrop → Settings → Integrations</a>, create an app and copy the <strong>test token</strong>. In n8n add a Raindrop credential (or a Header Auth credential) using that token:</p>
+            <pre><span class="k">Name:</span>  Authorization
+<span class="k">Value:</span> Bearer YOUR_API_TOKEN</pre>
+            <p>Then set your collection: open the collection in Raindrop and copy the numeric ID from the URL. In the <strong>Get many bookmarks</strong> node replace <code class="inline">REPLACE_WITH_YOUR_COLLECTION_ID</code> (use <code class="inline">0</code> for unsorted items).</p>
+          </div>
+        </div>
+
+        <div class="su">
+          <div class="b"></div>
+          <div>
+            <h3>Add the <a href="https://www.firecrawl.dev/" target="_blank" rel="noopener">Firecrawl</a> key</h3>
+            <p>Create a Firecrawl credential with your <a href="https://www.firecrawl.dev/app/api-keys" target="_blank" rel="noopener">API key</a> (or self&#8209;hosted base URL) and select it on the <strong>Scrape a url and get its content</strong> node. The node is set to continue on failure, so blocked sites won’t halt the run.</p>
+          </div>
+        </div>
+
+        <div class="su">
+          <div class="b"></div>
+          <div>
+            <h3>Create the tracking spreadsheet</h3>
+            <p>Make one <a href="https://sheets.google.com/" target="_blank" rel="noopener">Google Sheet</a> with three tabs named exactly <code class="inline">Raindrop</code>, <code class="inline">Summaries</code> and <code class="inline">Digests</code>. Connect a Google Sheets OAuth2 credential, then point each Sheets node at your spreadsheet — replacing <code class="inline">REPLACE_WITH_YOUR_GOOGLE_SHEET_ID</code> with your document ID.</p>
+            <div class="tabs-note">
+              <strong>Tab columns:</strong> <code class="inline">Raindrop</code> → url, title, markdown &nbsp;·&nbsp; <code class="inline">Summaries</code> → url, title, summary &nbsp;·&nbsp; <code class="inline">Digests</code> → url, Digest
+            </div>
+          </div>
+        </div>
+
+        <div class="su">
+          <div class="b"></div>
+          <div>
+            <h3>Connect <a href="https://openrouter.ai/" target="_blank" rel="noopener">OpenRouter</a> &amp; Gmail</h3>
+            <p>Add an OpenRouter credential with your <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">API key</a> and confirm it’s selected on the <strong>OpenRouter Chat Model</strong> node that feeds both AI agents. The node ships with the <code class="inline">google/gemini-3.1-flash-image-preview</code> model — swap in any model from <a href="https://openrouter.ai/models" target="_blank" rel="noopener">OpenRouter’s catalogue</a>. Then connect your <a href="https://mail.google.com/" target="_blank" rel="noopener">Gmail</a> OAuth2 credential and, on the <strong>Send a message</strong> node, change the recipient from <code class="inline">you@example.com</code> to your own address.</p>
+          </div>
+        </div>
+
+        <div class="su">
+          <div class="b"></div>
+          <div>
+            <h3>Test, then activate</h3>
+            <p>Run once with the <strong>Manual Trigger</strong> to confirm credentials and check the email. When you’re happy, toggle the workflow <strong>Active</strong> — the 06:00 schedule takes over from there. A second 15:00 schedule is included but disabled; enable it for a twice&#8209;daily digest.</p>
+            <div class="callout">
+              <span class="ci">🔒</span>
+              <p><strong>Heads up:</strong> this template ships with all personal data removed — credential IDs, sheet IDs and email are placeholders. Keep your own keys in n8n credentials and never commit them back to a public repo.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="fb"><span class="dot"></span> n8n workflow templates</div>
+      <p>Template 01 · Daily Digest — Read Later → Inbox</p>
+    </div>
+    <p>
+      <a href="https://github.com/timgranlundmarsden/n8n-workflow-templates" target="_blank" rel="noopener">Browse all templates on GitHub ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Load the (PII-free) workflow JSON and hand it to the read-only preview component.
+  // The component URL-decodes its `workflow` attribute, so we encode before setting it.
+  (function () {
+    var el = document.getElementById('wf');
+    var loading = document.getElementById('wf-loading');
+    var fallback = document.getElementById('wf-fallback');
+
+    function fail() {
+      if (loading) loading.style.display = 'none';
+      if (el) el.style.display = 'none';
+      if (fallback) fallback.style.display = 'block';
+    }
+
+    fetch('workflow.json', { cache: 'no-cache' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (json) {
+        el.setAttribute('workflow', encodeURIComponent(JSON.stringify(json)));
+        // Give the web component a moment to render, then drop the loading overlay.
+        setTimeout(function () { if (loading) loading.style.display = 'none'; }, 1200);
+      })
+      .catch(fail);
+  })();
+</script>
+</body>
+</html>

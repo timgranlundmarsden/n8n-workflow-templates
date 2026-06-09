@@ -1,0 +1,1187 @@
+{
+  "name": "Daily Digest Read Later",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🚀 WORKFLOW TRIGGERS\n\n**This workflow can be started in two ways:**\n\n### 1. Schedule Trigger (Daily at 08:00)\n- Runs automatically every day at 8:00 AM\n- Performs incremental sync (only new articles)\n- Best for regular daily digests\n\n### 2. Manual Trigger\n- Run on-demand whenever you want\n- Set `fullSync=true` parameter to reprocess ALL articles\n- Use this for testing or forcing a complete refresh\n\n**💡 Tip:** After importing, both triggers will merge into the next node automatically.",
+        "height": 1169,
+        "width": 550,
+        "color": 4
+      },
+      "id": "3ee295fa-2092-47c4-a731-58298158ed32",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        256
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2f25bcd8-8a76-4fcc-a3a9-1e0e20e83105",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🌧️ FETCH FROM RAINDROP.IO\n\n**Connecting to your Raindrop account:**\n\nThis node fetches articles from your specified collection.\n\n**Setup Required:**\n1. Create Raindrop API credentials in n8n\n2. Header Auth with:\n   - Name: `Authorization`\n   - Value: `Bearer YOUR_API_TOKEN`\n3. Get your token from: https://app.raindrop.io/settings/integrations\n\n**What happens here:**\n- Calls Raindrop API with your collection ID\n- Fetches up to 50 articles per page\n- Returns article metadata (title, URL, cover, domain, etc.)\n\n**Next:** Filter which articles to process based on metadata timestamps.",
+        "height": 1177,
+        "width": 450
+      },
+      "id": "f1fb5a09-3546-44fc-80c8-5fbf4706fa49",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        928,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "bookmark",
+        "operation": "getAll",
+        "collectionId": 0,
+        "limit": 10
+      },
+      "type": "n8n-nodes-base.raindrop",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        1024
+      ],
+      "id": "dc468ee6-4960-4a52-aee0-baf596693763",
+      "name": "Get many bookmarks",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "url",
+              "name": "url",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ba4361e3-ea16-4086-894f-f154b70f458d",
+      "name": "Extract URL",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1856,
+        944
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "4f00722f-2ff1-448d-917a-6fb288d369e5",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1616,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔄 ARTICLE SCRAPING LOOP\n\n**This is the main processing engine of the workflow:**\n\n### Loop Structure:\n1. **Split into batches** of 1 article at a time\n2. **Extract URL** from bookmark data\n3. **Firecrawl extraction** - Scrapes HTML content from URL using local Firecrawl instance\n4. **Extract metadata** - Pulls URL, title, and content from scrape response\n5. **Convert to JSON** - Formats data as JSON binary\n6. **Save raw scrape** - Stores as `/scrapes/{sanitized_url}.json`\n7. **Loop back** if more articles remain\n\n### What Gets Saved:\n- Raw HTML content from the article\n- Metadata (URL, title, description, status code)\n- Stored with sanitized filename (URL converted to safe format)\n\n### Error Handling:\n- Firecrawl continues on fail (some sites may block)\n- Each article is independent (one failure won't stop others)\n\n**💡 After all articles are scraped, workflow continues to summarization phase.**",
+        "height": 1173,
+        "width": 1514,
+        "color": 5
+      },
+      "id": "fbdf9764-1b27-45a7-acee-f30d78351775",
+      "name": "Sticky Note8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fileName",
+              "name": "fileName",
+              "value": "={{ $('Set Workflow Variables').item.json.basePath }}/scrapes/{{ $json.data.metadata.url.split('?')[0].replace(/^https?:\\/\\//, '').replace(/\\//g, '_').replace(/\\./g, '_') }}.json",
+              "type": "string"
+            },
+            {
+              "id": "238b3106-98a1-49a1-8a5e-ca3382d05fcc",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "48a33a32-0496-4c20-b056-d0a06fa34ca4",
+      "name": "Extract Data From Scrape",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2304,
+        944
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5360,
+        896
+      ],
+      "id": "a05b76cc-0ca3-499e-ba15-9669c0297f77",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<file_title>{{ $json.title }}</file_title>\n<file_contents>\n{{ String($json.markdown).slice(0, 150000) }}\n</file_contents>\n<user_instructions>\n# Digest Email Creator - System Prompt\nYou are an AI assistant that creates well-formatted HTML digest emails from scraped article data. Given a JSON file containing article content and metadata, you will produce clean, semantic HTML suitable for email clients.\n## Input Format\nYou will receive a single JSON file with the following structure:\n```json\n[{\n  \"fileName\": \"path/to/file.json\",\n  \"data\": {\n    \"html\": \"<!DOCTYPE html>... article content ...\",\n    \"metadata\": {\n      \"url\": \"https://...\",\n      \"title\": \"Article Title\",\n      \"ogTitle\": \"...\",\n      \"ogDescription\": \"...\",\n      \"contentType\": \"text/html\",\n      \"statusCode\": 200,\n      ...additional metadata\n    }\n  }\n}]\n```\nThe `data.html` field contains the scraped article HTML, and `data.metadata` contains publication info, URLs, and other details.\n## Output Format\nCreate a digest article block using clean HTML with inline styles (required for email compatibility). Output ONLY the HTML article block content, no markdown, no email wrapper, no headers or footers.\n### HTML Article Block Template\n```html\n<!-- Article Block -->\n<div style=\"margin-bottom: 40px; padding: 20px; background-color: #f9f9f9; border-radius: 8px; border-left: 4px solid #4a90e2;\">\n  <h3 style=\"color: #1a1a1a; font-size: 20px; margin: 0 0 12px 0; font-weight: 600;\">[Emoji] [Article Title]</h3>\n  <p style=\"font-size: 13px; color: #666; margin: 0 0 12px 0;\">\n    <strong>Source:</strong> [Publication] | <strong>Date:</strong> [Date] | <strong>Est. Reading Time:</strong> [X-Y min]\n  </p>\n  <p style=\"font-size: 16px; color: #2c3e50; margin: 0 0 16px 0; font-style: italic; font-weight: 500;\">[One compelling sentence explaining why someone should read this article - maximum 15 words]</p>\n  <ul style=\"margin: 0 0 16px 0; padding-left: 20px; list-style-type: none;\">\n    <li style=\"margin-bottom: 12px; font-size: 15px;\">\n      [Icon] <strong style=\"color: #1a1a1a;\">[Key Point 1 Title]:</strong> [ONE sentence only - max 20 words]\n    </li>\n    <li style=\"margin-bottom: 12px; font-size: 15px;\">\n      [Icon] <strong style=\"color: #1a1a1a;\">[Key Point 2 Title]:</strong> [ONE sentence only - max 20 words]\n    </li>\n    <li style=\"margin-bottom: 12px; font-size: 15px;\">\n      [Icon] <strong style=\"color: #1a1a1a;\">[Key Point 3 Title]:</strong> [ONE sentence only - max 20 words]\n    </li>\n  </ul>\n  <p style=\"margin: 16px 0 12px 0;\">\n    <a href=\"[URL]\" style=\"color: #4a90e2; text-decoration: none; font-size: 14px; word-break: break-all;\">🔗 [Full URL]</a>\n  </p>\n  <p style=\"font-size: 13px; color: #666; margin: 12px 0 0 0;\">\n    <strong>Tags:</strong> <span style=\"color: #4a90e2;\">#Tag1 #Tag2 #Tag3 #Tag4</span>\n  </p>\n</div>\n<!-- End Article Block -->\n```\n## Formatting Rules\n1. **Inline styles only**: All CSS must be inline for email client compatibility\n2. **Semantic HTML**: Use appropriate heading levels (h3 for article title)\n3. **One-liner**: Must be compelling and tell them WHY to read - **MAXIMUM 15 WORDS**\n4. **Bullet points**: Exactly **3 points** (reduced from 5) using `<ul>` with list-style-type: none. **Each bullet must start with a relevant emoji icon**, followed by the bolded title and explanation. Each explanation must be **ONE SENTENCE ONLY, maximum 20 words**\n5. **Reading time**: Estimate based on word count (~200 words per minute)\n6. **URL**: Display the full URL as the link text with word-break for long URLs\n7. **Tags**: **4 short, relevant hashtags** (reduced from 4-6) in a styled span\n8. **Icons**: Use emoji Unicode characters directly in HTML (choose appropriate emoji for article topic and each bullet point)\n9. **Color scheme**: Use professional, accessible colors with good contrast\n10. **BE CONCISE**: This is a digest format - prioritize brevity and scanability over detail\n## Email-Safe HTML Guidelines\n- Avoid external CSS files\n- Use hex colors, not RGB/RGBA\n- Use web-safe fonts with fallbacks\n- Use `&amp;` for ampersands, `&nbsp;` for non-breaking spaces\n- Keep HTML clean and semantic\n## Border Colors by Topic\nChoose border color (border-left: 4px solid #COLOR) based on article category:\n- 🤖 AI Engineering & Development: `#4a90e2` (blue)\n- 🔒 Security & Risk: `#e74c3c` (red)\n- 📰 Industry & Culture: `#f39c12` (orange)\n- 💡 Research & Innovation: `#9b59b6` (purple)\n- 🎯 Strategy & Business: `#27ae60` (green)\n## Reading Time Estimation\n- Short article (1,000-2,000 words): 5-10 min\n- Medium article (2,000-4,000 words): 10-20 min  \n- Long article (4,000-6,000 words): 20-30 min\n- Very long article (6,000+ words): 30-50 min\n## Content Extraction\nFrom the JSON `data.html` field:\n- Extract the main article body (ignore navigation, ads, comments, scripts)\n- Pull the article title from H1 tags or use `metadata.title` or `metadata.ogTitle`\n- Estimate word count from the body text for reading time calculation\n- Strip all scripts, styles, and tracking elements\nFrom the JSON `data.metadata` field:\n- Use available date fields (look for date-related properties)\n- Extract source/publication name from `ogSiteName` or domain from `url`\n- Use `url` or `ogUrl` or `sourceURL` for the canonical link\n- Leverage `ogDescription` for context if helpful\n## Output Requirements\n1. Output ONLY the HTML article block content (no markdown code blocks, no wrappers)\n2. Ensure all special characters are HTML-encoded\n3. Use UTF-8 encoding\n4. Keep semantic structure clear for screen readers\n5. Maintain consistent spacing and visual hierarchy\n6. Choose appropriate emoji and border color based on article content\n7. **Select relevant emoji icons for each bullet point** that match the content of that specific point\n8. **CRITICAL: Keep summaries ultra-concise** - this is a digest, not a detailed analysis\nNow process the provided JSON file and create the digest article block HTML following this format exactly. Output clean, semantic HTML ready to be inserted into an email body.\n</user_instructions>",
+        "options": {
+          "systemMessage": "You are an AI assistant that creates well-formatted HTML digest emails from scraped article data. Given a JSON file containing article content and metadata, you will produce clean, semantic HTML suitable for email clients.\n \nYou MUST follow these rules:\n1. Output ONLY the HTML body content, no markdown code blocks\n2. Use inline styles only for email client compatibility\n3. Use semantic HTML with appropriate heading levels\n4. Include exactly 5 bullet points per article\n5. Estimate reading time based on word count (~200 words per minute)\n6. Display full URLs as link text with word-break for long URLs\n7. Add 4-6 relevant hashtags per article\n8. Use emoji Unicode characters directly in HTML\n9. Ensure all special characters are HTML-encoded\n10. Keep the container max-width at 680px\n\nEmail-safe guidelines:\n- Use hex colors only\n- Use web-safe fonts with fallbacks\n- Ensure &amp; for ampersands\n- Keep total HTML under 102KB"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        3840,
+        1168
+      ],
+      "id": "0c14939d-0333-4ebb-aabe-62c34d86b948",
+      "name": "Article Summary"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=<currentDateTime>  \n{{ $now.toLocal() }}  \n</currentDateTime>\n\n\n<file_contents>\n{{ $json.articles }}\n</file_contents>\n\n<user_instructions>\n\nDigest Email Creator - System Prompt\n\nYou are an AI assistant that creates well-formatted HTML digest emails from pre-formatted article data. Your role is to organize and structure articles, NOT to modify their content.\n\nInput Format\n\nYou will receive multiple <article> XML tags, each containing a JSON object with a “data” field that holds the complete HTML:\n\n<article>{\"data\":\"<div style=\\\"...\\\">...complete article HTML...</div>\"}</article>\n<article>{\"data\":\"<div style=\\\"...\\\">...complete article HTML...</div>\"}</article>\n\nEach article block is already complete and formatted with:\n\t•\tComplete styling and formatting\n\t•\tTitle with emoji\n\t•\tSource, date, and reading time\n\t•\tSummary and bullet points\n\t•\tURL and tags\n\nYour Task\n\nCreate a complete digest email by:\n\t1.\tExtract all article HTML blocks from the nested JSON structure\n\t2.\tAnalyze article content to determine appropriate categories (based on title, tags, or content themes)\n\t3.\tGroup articles by category (AI Engineering, Security, Parenting, Culture, etc.)\n\t4.\tAdd email wrapper structure: header, category section headers, and footer\n\t5.\tPRESERVE ALL EXISTING ARTICLE HTML inject the exact HTML strings without modification\n\nCritical Output Formatting Rules\n\nDO NOT wrap your output in markdown code blocks.\n\t•\t❌ WRONG: html\\n<div>...</div>\\n\n\t•\t✅ CORRECT: …\n\nYour response must start immediately with <div style=\"font-family: -apple-system...\nYour response must end with the closing </div> tag.\n\nOutput the raw HTML directly with no markdown formatting, no code fences, and no explanatory text.\n\nCritical Rule: DO NOT MODIFY ARTICLE CONTENT\n\n⚠️ IMPORTANT You must inject the article HTML blocks EXACTLY as they appear in the input JSON. Do not:\n\t•\tRewrite or rephrase any text\n\t•\tChange any styling or formatting\n\t•\tModify URLs, dates, or metadata\n\t•\tAlter the structure of the article divs\n\t•\tAdd or remove any content from the articles\n\nYour ONLY job is to:\n\t•\tAdd the email container wrapper\n\t•\tAdd category section headers between article groups\n\t•\tAdd the email header (title and date)\n\t•\tAdd the email footer\n\t•\tOrganize articles under appropriate category headers\n\nOutput Requirements\n\t1.\tOutput ONLY the HTML content (no markdown code blocks, no explanations)\n\t2.\tInject article HTML blocks as-is from the input JSON\n\t3.\tUse UTF-8 encoding\n\t4.\tEnsure special characters in YOUR added sections are HTML-encoded (& not &)\n\t5.\tMaintain semantic structure for screen readers\n\t6.\tUse current date in the email header\n\nArticle Ordering\n\t•\tThe articles in <file_contents> are already sorted from most recent (top) to oldest (bottom).\n\t•\tYou MUST preserve this original order in your output.\n\t•\tDo NOT reorder, sort, or shuffle articles in any way.\n\t•\tWhen assigning categories, you may add category section headers, but each article must appear in the same relative order as in the input.\n\nCategory Headers\n\nUse these category headers with appropriate emoji and styling:\n\t•\t🤖 AI Engineering & Development\n\t•\t🔒 Security & Risk\n\t•\t📰 Industry & Culture\n\t•\t👨‍👩‍👧‍👦 Parenting & Family\n\t•\t💡 Research & Innovation\n\t•\t🎯 Strategy & Business\n\t•\t📚 Education & Learning\n\t•\t🌍 Society & Policy\n\nDetermine categories by analyzing article titles, tags, or content themes.\n\nImplementation Steps\n\t1.\tParse the JSON to extract all article HTML strings from the nested structure\n\t2.\tAnalyze each article to determine its primary category\n\t3.\tGroup articles by category in a logical order\n\t4.\tBuild the output:\n\t•\tStart with opening container div\n\t•\tAdd email header (h1 title and date)\n\t•\tFor each category with articles:\n\t•\tAdd category h2 header\n\t•\tInject each article’s exact HTML string\n\t•\tAdd footer\n\t•\tClose container div\n\t5.\tOutput ONLY the complete HTML (no markdown code blocks)\n\nOutput Format\n\nCreate a digest email with this structure:\n\n<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 20px; color: #333; line-height: 1.6;\">\n\n    <!-- Email Header (YOU ADD THIS) -->\n    <h1 style=\"color: #1a1a1a; font-size: 32px; margin-bottom: 8px; font-weight: 700;\">[Dynamic Title Based on Research Content]</h1>\n    <p style=\"color: #666; font-size: 14px; margin-bottom: 32px;\">[Exact Current DateTime Take from <currentDateTime> formatted like Wednesday, November 20th 2025, 06:27 (using 24 hour clock)</p>\n\n    <!-- Category Section (YOU ADD THIS) -->\n    <h2 style=\"color: #1a1a1a; font-size: 24px; margin: 32px 0 16px 0; font-weight: 600; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px;\">🤖 AI Engineering &amp; Development</h2>\n\n    <!-- Article Block (INJECT EXACT HTML FROM INPUT) -->\n    [EXACT ARTICLE HTML FROM JSON - DO NOT MODIFY]\n\n    <!-- Article Block (INJECT EXACT HTML FROM INPUT) -->\n    [EXACT ARTICLE HTML FROM JSON - DO NOT MODIFY]\n\n    <!-- Category Section (YOU ADD THIS) -->\n    <h2 style=\"color: #1a1a1a; font-size: 24px; margin: 32px 0 16px 0; font-weight: 600; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px;\">🔒 Security &amp; Risk</h2>\n\n    <!-- Article Block (INJECT EXACT HTML FROM INPUT) -->\n    [EXACT ARTICLE HTML FROM JSON - DO NOT MODIFY]\n\n    <!-- Footer (YOU ADD THIS) -->\n    <hr style=\"border: none; border-top: 1px solid #e0e0e0; margin: 40px 0 20px 0;\" />\n    <p style=\"font-size: 13px; color: #999; text-align: center; font-style: italic;\">Curated research digest</p>\n\n</div>\n\n</user_instructions>",
+        "options": {
+          "systemMessage": "You are an AI assistant that creates well-formatted HTML digest emails from pre-formatted article data. Given input JSON containing already-formatted article HTML, you will organize and structure these articles into a complete digest email.\n\nYou MUST follow these rules:\n\nCRITICAL - CONTENT PRESERVATION:\n1. Articles in the input JSON are already complete and formatted\n2. You MUST inject article HTML exactly as provided - DO NOT modify, rewrite, or reformat\n3. Your role is to ADD structure (headers, categories, wrapper) NOT to change article content\n\nYOUR RESPONSIBILITIES:\n4. Extract article HTML blocks from the nested JSON structure\n5. Analyze article content to determine appropriate categories\n6. Group articles under category section headers\n7. Add email wrapper (container div, title, date, footer)\n8. Output ONLY the complete HTML body content (no markdown code blocks, no explanations)\n\nFORMATTING FOR YOUR ADDED ELEMENTS:\n9. Use inline styles only for email client compatibility\n10. Use semantic HTML with appropriate heading levels (h1 for title, h2 for categories)\n11. Use hex colors only (not RGB/RGBA)\n12. Use web-safe fonts with fallbacks\n13. Ensure special characters are HTML-encoded (&amp; not &)\n14. Use emoji Unicode characters directly in HTML\n15. Keep the container max-width at 680px\n16. Keep total HTML under 102KB for Gmail compatibility\n\nWHAT YOU ADD:\n- Opening container div with email-safe styling\n- Email header (h1 title + date paragraph)\n- Category section headers (h2) to organize articles\n- Footer section with horizontal rule\n- Closing container div\n\nWHAT YOU DO NOT MODIFY:\n- Article div blocks (inject exactly as provided)\n- Article titles, summaries, or bullet points\n- Article metadata (source, date, reading time)\n- Article URLs or tags\n- Any styling within article blocks\n\nRemember: Extract → Categorize → Organize → Inject (don't modify article content)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        5808,
+        896
+      ],
+      "id": "22fb58e4-44dc-42ad-b0de-96d165b20a06",
+      "name": "Email Digest Creator"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fileName",
+              "name": "fileName",
+              "value": "={{ $('Loop Over Items1').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "90ca17e9-3c34-4923-8874-c0e4149406ee",
+              "name": "title",
+              "value": "={{ $('Loop Over Items1').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "238b3106-98a1-49a1-8a5e-ca3382d05fcc",
+              "name": "data",
+              "value": "={{ $json.output\n    .replace(/^```html\\n/, '')\n    .replace(/\\n```$/, '')  \n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e1ff200a-2475-4b55-89b3-78f2fc9ca611",
+      "name": "Extract Content2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4192,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fileName",
+              "name": "fileName",
+              "value": "=/data/research_summariser/digests/digest_final.html",
+              "type": "string"
+            },
+            {
+              "id": "238b3106-98a1-49a1-8a5e-ca3382d05fcc",
+              "name": "data",
+              "value": "={{ $json.output\n    .replace(/^```html\\n/, '')\n    .replace(/\\n```$/, '') \n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "48450cf4-dd1f-4959-895f-1be5cc0fc58f",
+      "name": "Extract Content3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6208,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 100,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3376,
+        880
+      ],
+      "id": "812f8133-fdf2-4234-aa74-52894e1788d0",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "content": "## 📧 CREATE DIGEST EMAIL CONTENT\n\n**Assembling individual summaries into complete digest email:**\n\n### What Happens Here:\n1. **Gather summaries** - Reads all HTML files from `/summaries/` directory\n2. **Extract HTML content** - Converts binary files to text for AI processing\n3. **Aggregate all summaries** - Combines all article HTML blocks into single payload\n4. **AI Email Assembly** - the configured Gemini model organizes the content by:\n   - Analyzing article themes and tags\n   - Grouping articles into categories (AI, Security, Culture, etc.)\n   - Adding email wrapper (header with dynamic title and date)\n   - Adding category section headers (h2 with emoji)\n   - Injecting article HTML blocks EXACTLY as-is (no modifications)\n   - Adding footer with horizontal rule\n5. **Extract digest HTML** - Pulls complete email HTML from AI response\n6. **Convert to binary** - Prepares HTML for file writing\n7. **Save digest** - Stores as timestamped file in `/digests/` directory\n\n### Critical Behavior:\n- AI does NOT modify article content\n- Only adds structure: wrapper, headers, categories, footer\n- Creates complete, email-ready HTML document\n\n**💡 Output is a single HTML file containing the complete categorized digest.**",
+        "height": 1184,
+        "width": 1728
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4992,
+        256
+      ],
+      "id": "bf840d91-8c81-4f8a-af90-44d65932c5ed",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## 📬 SEND EMAIL\n\n**Delivering the digest to your inbox:**\n\n### What Happens Here:\n1. **Read digest content** - Uses the assembled HTML digest from the Google Sheets digest row\n2. **Send via Gmail** - Sends an HTML email with:\n   - `to`: Recipient email address\n   - `subject`: Daily Digest To Read plus the current day\n   - `message`: Complete HTML digest body\n\n### Email Delivery:\n- Uses the Gmail node with your Gmail OAuth2 credentials\n- Sends the generated HTML digest directly to the configured recipient\n- Email is fully styled and ready to read\n\n### Configuration:\n⚠️ **Action Required:**\n- Update the `to` email address in the Gmail node\n- Reconnect your Gmail OAuth2 credential after import\n- Test with the manual trigger before enabling schedules\n\n**💡 This is the final step - digest is sent and workflow completes!**",
+        "height": 1184,
+        "width": 816,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6784,
+        256
+      ],
+      "id": "5bb9071d-e2ad-443d-9ded-9a6870fecb4d",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## 📝 CREATE ARTICLE SUMMARIES\n\n**Processing scraped articles into formatted HTML summaries:**\n\n### What Happens Here:\n1. **Read scraped files** - Loads all JSON files from `/scrapes/` directory\n2. **Loop through articles** - Processes up to 100 articles in batches\n3. **Extract text data** - Converts binary JSON files to text for AI processing\n4. **AI Summarization** - the configured Gemini model analyzes article HTML and creates:\n   - Compelling one-liner (why read this?)\n   - 5 key takeaway bullet points with explanations\n   - Source metadata, reading time estimate\n   - Relevant tags and categorization\n   - Styled HTML block with emoji and color-coding\n5. **Extract AI output** - Pulls generated HTML from AI response\n6. **Convert to binary** - Prepares HTML for file writing\n7. **Save summary** - Stores as `/summaries/{filename}.html`\n\n### Output:\n- Each article gets its own summary HTML file\n- Summaries are self-contained, styled HTML blocks\n- Ready to be assembled into digest email\n\n**💡 These summaries are pre-formatted and won't be modified in the next phase.**",
+        "height": 1184,
+        "width": 1904,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2992,
+        256
+      ],
+      "id": "992b96f3-069d-4dc8-88ba-3a92ddb2ab11",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fullSync",
+              "name": "fullSync",
+              "value": "={{ $('Manual Trigger').isExecuted ? ($parameter.fullSync ?? false) : false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "currentDateTime",
+              "name": "currentDateTime",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "basePath",
+              "name": "basePath",
+              "value": "/data/research_summariser",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c41943d3-c5ce-45c0-99f8-832ab81c4f43",
+      "name": "Set Workflow Variables",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ CONFIGURATION\n\n**Setting up workflow variables:**\n\n- **fullSync**: Determines if we process all articles or just new ones\n- **currentDateTime**: Timestamp for this run\n- **basePath**: `/data/research_summariser` (mounted volume)\n- **raindropCollectionId**: Your collection ID (CHANGE THIS!)\n\n**📝 Action Required:**\n1. Find your Raindrop collection ID at app.raindrop.io\n2. Edit this node and replace `REPLACE_WITH_YOUR_COLLECTION_ID`\n3. Use `0` for unsorted items or the specific collection number",
+        "height": 1169,
+        "width": 506,
+        "color": 5
+      },
+      "id": "eb647408-4a3e-42cd-9d59-8c8a2d4f410a",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        736
+      ],
+      "id": "20a5dce2-c564-41f2-b816-975e5f920c8c",
+      "name": "Wait for all to be done"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4144,
+        752
+      ],
+      "id": "0ace28d7-e777-459b-a62c-5e378c6da6d0",
+      "name": "Wait for all to be done1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json.data;\n\n// Filter out items that don't start with an HTML tag\nconst validData = data.filter(item => {\n  if (typeof item === 'string') {\n    const trimmed = item.trim();\n    return trimmed.startsWith('<');\n  }\n  return true; // Keep non-string items as-is\n});\n\nconst articles = validData.map(item =>\n  `<article>${JSON.stringify(item)}</article>`\n).join('\\n');\n\nreturn [{ json: { articles } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5632,
+        896
+      ],
+      "id": "1a524e4c-5004-4ef4-8995-dfcb12f181fd",
+      "name": "Prepare and Filter Results"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "0af13446-478e-4c35-b71b-73a00ccb4ac6",
+      "name": "Schedule Trigger (06:00 Daily)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "scrape",
+        "url": "={{ $json.url }}",
+        "scrapeOptions": {
+          "options": {
+            "formats": {
+              "format": [
+                {}
+              ]
+            },
+            "headers": {}
+          }
+        },
+        "requestOptions": {}
+      },
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        944
+      ],
+      "id": "973efc92-87d3-4b86-bde7-44f44d327e0e",
+      "name": "Scrape a url and get its content",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Raindrop",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $('Extract URL').item.json.url }}",
+            "markdown": "={{ String($json.data.markdown).slice(0, 50000) }}",
+            "title": "={{ $json.data.metadata[\"og:title\"] }}"
+          },
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "markdown",
+              "displayName": "markdown",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4e6107f4-3b3b-4214-8aa3-57511210d501",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2720,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1244137778,
+          "mode": "list",
+          "cachedResultName": "Summaries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=1244137778"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $json.fileName }}",
+            "title": "={{ $json.title }}",
+            "summary": "={{ $json.data }}"
+          },
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9426a288-b78c-425e-a0d0-c84012241483",
+      "name": "Save to Google Sheets1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4464,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Raindrop",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "635999b9-7b8c-454e-ad2b-43ea8e878ed3",
+      "name": "Read from Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3088,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1244137778,
+          "mode": "list",
+          "cachedResultName": "Summaries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=1244137778"
+        },
+        "options": {}
+      },
+      "id": "434bab91-cddc-4619-955c-638f91f2b23b",
+      "name": "Gather Summaries from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5072,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1284076372,
+          "mode": "list",
+          "cachedResultName": "Digests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=1284076372"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Digest": "={{ $json.data }}",
+            "url": "={{ $json.fileName }}"
+          },
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Digest",
+              "displayName": "Digest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6332debf-59bf-41eb-aa14-f917e2a8e0c7",
+      "name": "Save to Google Sheets2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        6512,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "=Daily Digest To Read - {{ $now.toLocal().format('DDDD') }}",
+        "message": "={{ $json.Digest }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        6960,
+        896
+      ],
+      "id": "ff538434-3146-4442-a075-5824e535d152",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Raindrop",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "keepFirstRow": true
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        704,
+        800
+      ],
+      "id": "84729765-c680-40e6-95ba-f98ed9be1ba6",
+      "name": "Clear sheet"
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "DailyDigest",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1244137778,
+          "mode": "list",
+          "cachedResultName": "Summaries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=1244137778"
+        },
+        "keepFirstRow": true
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        1040
+      ],
+      "id": "f2f3cc68-f0a2-4804-9569-aa5daac18e57",
+      "name": "Clear sheet1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b02fdb74-3151-49b5-9ad9-a7c0e1d4f99f",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2480,
+        944
+      ],
+      "id": "9463efb5-49c6-44e9-83a5-55b077b463af",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "00 15 * * *"
+            }
+          ]
+        }
+      },
+      "id": "23c3f567-db2f-4059-89dd-70fea20c40ea",
+      "name": "Schedule Trigger (15:00 Daily)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        928
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.1-flash-image-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        4624,
+        976
+      ],
+      "id": "4fbf0369-9276-4f32-9e2c-d6e7d6153093",
+      "name": "OpenRouter Chat Model"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Workflow Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many bookmarks": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract URL": {
+      "main": [
+        [
+          {
+            "node": "Scrape a url and get its content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Wait for all to be done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data From Scrape": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Prepare and Filter Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Article Summary": {
+      "main": [
+        [
+          {
+            "node": "Extract Content2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Digest Creator": {
+      "main": [
+        [
+          {
+            "node": "Extract Content3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Content2": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Content3": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Wait for all to be done1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Article Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Workflow Variables": {
+      "main": [
+        [
+          {
+            "node": "Clear sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for all to be done": {
+      "main": [
+        [
+          {
+            "node": "Read from Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for all to be done1": {
+      "main": [
+        [
+          {
+            "node": "Gather Summaries from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare and Filter Results": {
+      "main": [
+        [
+          {
+            "node": "Email Digest Creator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger (06:00 Daily)": {
+      "main": [
+        [
+          {
+            "node": "Set Workflow Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape a url and get its content": {
+      "main": [
+        [
+          {
+            "node": "Extract Data From Scrape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read from Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather Summaries from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets2": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear sheet": {
+      "main": [
+        [
+          {
+            "node": "Clear sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear sheet1": {
+      "main": [
+        [
+          {
+            "node": "Get many bookmarks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger (15:00 Daily)": {
+      "main": [
+        [
+          {
+            "node": "Set Workflow Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Article Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Email Digest Creator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
