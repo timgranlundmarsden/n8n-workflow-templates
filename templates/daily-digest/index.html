@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <!-- n8n read-only workflow preview component -->
-<script src="https://cdn.jsdelivr.net/npm/@n8n_io/n8n-demo-component/n8n-demo.bundled.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@n8n_io/n8n-demo-component/n8n-demo.bundled.js"></script>
 
 <style>
   :root{
@@ -300,7 +300,7 @@
         <span class="chip"><span class="ico">✉️</span> Gmail delivery</span>
       </div>
       <div class="cta reveal d5">
-        <a class="btn btn-primary" href="workflow.json" download="daily-digest.workflow.json">
+        <a class="btn btn-primary" href="workflow.json" download="daily-digest-workflow.json">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
           Download workflow.json
         </a>
@@ -321,7 +321,7 @@
         <n8n-demo id="wf" frame="true" clicktointeract="true" collapseformobile="true" theme="light"></n8n-demo>
         <div id="wf-fallback">
           <p>The interactive preview couldn’t load (it needs to be served over the web).<br>
-          You can still <a href="workflow.json" download>download the workflow JSON</a> and import it into n8n.</p>
+          You can still <a href="workflow.json" download="daily-digest-workflow.json">download the workflow JSON</a> and import it into n8n.</p>
         </div>
       </div>
     </div>
@@ -496,7 +496,7 @@
           <div class="b"></div>
           <div>
             <h3>Import the workflow</h3>
-            <p><a href="workflow.json" download>Download <code class="inline">workflow.json</code></a>, then in <a href="https://n8n.io/" target="_blank" rel="noopener">n8n</a> choose <strong>Workflows → Import from File</strong>. The canvas’ sticky notes mirror the guidance on this page.</p>
+            <p><a href="workflow.json" download="daily-digest-workflow.json">Download <code class="inline">workflow.json</code></a>, then in <a href="https://n8n.io/" target="_blank" rel="noopener">n8n</a> choose <strong>Workflows → Import from File</strong>. The canvas’ sticky notes mirror the guidance on this page.</p>
           </div>
         </div>
 
