@@ -15,7 +15,7 @@ Every template lives in its own folder under [`templates/`](templates/) and ship
 
 | # | Template | What it does | Docs |
 |---|----------|--------------|------|
-| 01 | **[Daily Digest — Read Later → Inbox](templates/daily-digest/)** | Pulls saved articles from Raindrop.io, scrapes them with Firecrawl, summarises with an LLM via OpenRouter, and emails a categorised daily digest. | [Open page ↗](https://timgranlundmarsden.github.io/n8n-workflow-templates/templates/daily-digest/) |
+| 01 | **[Daily Digest — Read Later → Inbox](templates/daily-digest/)** | Pulls saved articles from Raindrop.io, scrapes them with Firecrawl, summarises with an LLM via OpenRouter, and emails a categorised daily digest. <img width="3599" height="1862" alt="image" src="https://github.com/user-attachments/assets/fcffadf7-eb76-4417-9d18-b2777fa08db2" /> | [Open page ↗](https://timgranlundmarsden.github.io/n8n-workflow-templates/templates/daily-digest/) |
 
 _More templates coming — each added as a new numbered folder._
 
