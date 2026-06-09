@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>n8n Workflow Templates — a curated collection</title>
+<meta name="description" content="A curated collection of ready-to-import n8n workflow templates, each with a clean documentation page and an interactive, read-only preview of the workflow canvas." />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="n8n Workflow Templates" />
+<meta property="og:description" content="Ready-to-import n8n workflows, each with docs and an interactive canvas preview." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    --paper:#f7f1e8;
+    --paper-2:#efe6d8;
+    --ink:#1c1714;
+    --ink-soft:#5b5248;
+    --ink-faint:#8c8175;
+    --line:#ddd0bd;
+    --coral:#ea4b71;
+    --coral-deep:#c5305a;
+    --plum:#3a2740;
+    --teal:#2f8f83;
+    --blue:#4a73c4;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Hanken Grotesk",-apple-system,system-ui,sans-serif;
+    font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    background-image:
+      radial-gradient(1100px 700px at 85% -8%, rgba(234,75,113,.12), transparent 60%),
+      radial-gradient(900px 600px at -5% 12%, rgba(58,39,64,.10), transparent 55%);
+    background-attachment:fixed;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+  }
+  .wrap{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  a{color:inherit}
+  ::selection{background:var(--coral);color:#fff}
+
+  /* top bar */
+  header.bar{position:sticky;top:0;z-index:50;backdrop-filter:saturate(1.4) blur(10px);background:linear-gradient(var(--paper), rgba(247,241,232,.78));border-bottom:1px solid var(--line)}
+  .bar-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;height:62px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.01em}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px rgba(234,75,113,.18)}
+  .brand small{font-family:"JetBrains Mono",monospace;font-weight:500;color:var(--ink-faint);font-size:12px}
+  .gh{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);padding:7px 13px;border-radius:999px;background:#fff8;text-decoration:none;color:var(--ink-soft);font-weight:600;font-size:14.5px}
+  .gh:hover{border-color:var(--ink);background:#fff;color:var(--ink)}
+
+  /* hero */
+  .hero{padding:84px 0 34px}
+  .kicker{display:inline-flex;align-items:center;gap:10px;font-family:"JetBrains Mono",monospace;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--coral-deep);font-weight:600;margin-bottom:22px}
+  .kicker::before{content:"";width:30px;height:1px;background:var(--coral)}
+  h1{font-family:"Fraunces",serif;font-weight:600;font-optical-sizing:auto;font-size:clamp(46px,8vw,96px);line-height:.96;letter-spacing:-.03em;margin:0 0 22px;max-width:14ch}
+  h1 em{font-style:italic;color:var(--coral-deep);font-weight:500}
+  .deck{font-size:clamp(18px,2.4vw,23px);color:var(--ink-soft);max-width:62ch;margin:0;line-height:1.5}
+  .deck b{color:var(--ink);font-weight:600}
+
+  .reveal{opacity:0;transform:translateY(14px);animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.05s}.d2{animation-delay:.14s}.d3{animation-delay:.23s}.d4{animation-delay:.34s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){.reveal{animation:none;opacity:1;transform:none}}
+
+  /* templates */
+  .templates{padding:34px 0 40px}
+  .sec-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding-top:22px;margin-bottom:30px}
+  .sec-row h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(24px,3vw,32px);letter-spacing:-.02em;margin:0}
+  .count{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink-faint)}
+
+  /* featured card */
+  .feat-card{
+    display:grid;grid-template-columns:1.15fr .85fr;gap:0;
+    border:1px solid var(--line);border-radius:22px;overflow:hidden;background:#fff;
+    box-shadow:0 30px 70px -40px rgba(28,23,20,.5);text-decoration:none;color:inherit;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .feat-card:hover{transform:translateY(-4px);border-color:var(--coral);box-shadow:0 44px 90px -42px rgba(28,23,20,.6)}
+  .feat-body{padding:38px 40px}
+  .feat-no{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--coral-deep);font-weight:600;letter-spacing:.08em}
+  .feat-card h3{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(26px,3.4vw,38px);letter-spacing:-.02em;line-height:1.05;margin:10px 0 14px}
+  .feat-card p{color:var(--ink-soft);font-size:16.5px;margin:0 0 22px;max-width:48ch}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  .open{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15.5px;color:var(--ink)}
+  .open .arrow{transition:transform .2s ease}
+  .feat-card:hover .open .arrow{transform:translateX(5px)}
+  .feat-art{position:relative;background:linear-gradient(155deg,#fbeef0,#f3e8da);border-left:1px solid var(--line);overflow:hidden;padding:30px 30px 0;min-height:280px}
+  .feat-art img{display:block;width:100%;height:auto;border-radius:12px 12px 0 0;border:1px solid var(--line);border-bottom:none;box-shadow:0 26px 55px -30px rgba(28,23,20,.5)}
+  .feat-art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:130px;background:linear-gradient(transparent,#f3e8da);pointer-events:none}
+  @media(max-width:820px){.feat-card{grid-template-columns:1fr}.feat-art{order:-1;border-left:none;border-bottom:1px solid var(--line);max-height:320px;padding:26px 26px 0}}
+
+  /* small grid (soon) */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:18px}
+  .soon{border:1px dashed var(--line);border-radius:18px;padding:28px;background:#fff7;color:var(--ink-faint)}
+  .soon .feat-no{color:var(--ink-faint)}
+  .soon h3{font-family:"Fraunces",serif;font-weight:600;font-size:22px;margin:10px 0 8px;color:var(--ink-soft)}
+  .soon p{margin:0;font-size:14.5px}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);margin-top:64px;padding:44px 0 60px;background:linear-gradient(transparent,rgba(58,39,64,.04))}
+  .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;align-items:center}
+  .foot .fb{display:flex;align-items:center;gap:11px;font-family:"Fraunces",serif;font-size:20px;font-weight:600}
+  .foot .fb .dot{width:9px;height:9px;border-radius:50%;background:var(--coral)}
+  .foot p{margin:0;color:var(--ink-faint);font-size:14px}
+  .foot a{color:var(--ink-soft);text-decoration:none;font-weight:600}
+  .foot a:hover{color:var(--coral-deep)}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-inner">
+    <div class="brand"><span class="dot"></span> n8n&nbsp;templates <small>/ a collection</small></div>
+    <a class="gh" href="https://github.com/timgranlundmarsden/n8n-workflow-templates" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div class="kicker reveal d1">A collection of n8n workflow templates</div>
+      <h1 class="reveal d2">Workflows worth <em>using.</em></h1>
+      <p class="deck reveal d3"><b>Ready&#8209;to&#8209;import n8n automations</b> — each one comes with a documentation page, a step&#8209;by&#8209;step setup guide, and an interactive, read&#8209;only preview of the workflow canvas. Import, plug in your keys, and run.</p>
+    </div>
+  </section>
+
+  <section class="templates">
+    <div class="wrap">
+      <div class="sec-row reveal d4">
+        <h2>Templates</h2>
+        <span class="count" id="count">1 available</span>
+      </div>
+
+      <a class="feat-card reveal d4" href="templates/daily-digest/index.html">
+        <div class="feat-body">
+          <span class="feat-no">01 · daily-digest</span>
+          <h3>Daily Digest — Read&nbsp;Later&nbsp;→&nbsp;Inbox</h3>
+          <p>Pulls the articles you saved to Raindrop.io but never got to, scrapes each one with Firecrawl, writes a tight three&#8209;point summary with an LLM via OpenRouter, and emails you a clean, categorised digest every morning.</p>
+          <div class="chips">
+            <span class="chip">🌧️ Raindrop.io</span>
+            <span class="chip">🔥 Firecrawl</span>
+            <span class="chip">✦ OpenRouter</span>
+            <span class="chip">📊 Sheets</span>
+            <span class="chip">✉️ Gmail</span>
+          </div>
+          <span class="open">Open template <span class="arrow">→</span></span>
+        </div>
+        <div class="feat-art">
+          <img src="templates/daily-digest/img/digest-example.png" width="1052" height="1658" loading="lazy" decoding="async"
+               alt="Preview of the Daily Digest email output, showing categorised article cards with summaries, takeaways and tags." />
+        </div>
+      </a>
+
+      <div class="grid">
+        <div class="soon reveal d4">
+          <span class="feat-no">02 · coming soon</span>
+          <h3>More on the way</h3>
+          <p>New templates land here as they’re built. Star the repo on GitHub to follow along.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="fb"><span class="dot"></span> n8n workflow templates</div>
+      <p>Import-ready automations with docs &amp; live previews.</p>
+    </div>
+    <p><a href="https://github.com/timgranlundmarsden/n8n-workflow-templates" target="_blank" rel="noopener">View the repository on GitHub ↗</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

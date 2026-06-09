@@ -73,6 +73,8 @@
   .bar-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;height:62px}
   .brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.01em}
   .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 4px rgba(234,75,113,.18)}
+  .brand .home{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:inherit;transition:opacity .15s ease}
+  .brand .home:hover{opacity:.65}
   .brand small{font-family:"JetBrains Mono",monospace;font-weight:500;color:var(--ink-faint);font-size:12px;letter-spacing:.02em}
   .bar-links{display:flex;align-items:center;gap:24px;font-size:14.5px}
   .bar-links a{text-decoration:none;color:var(--ink-soft);font-weight:600}
@@ -269,7 +271,7 @@
 
 <header class="bar">
   <div class="wrap bar-inner">
-    <div class="brand"><span class="dot"></span> n8n&nbsp;templates <small>/ 01 · daily-digest</small></div>
+    <div class="brand"><a class="home" href="../../index.html"><span class="dot"></span> n8n&nbsp;templates</a> <small>/ 01 · daily-digest</small></div>
     <nav class="bar-links">
       <a href="#how" class="hide-sm">How it works</a>
       <a href="#need" class="hide-sm">Requirements</a>

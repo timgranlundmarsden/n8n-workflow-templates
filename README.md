@@ -50,9 +50,11 @@ Because the component must fetch its JSON over HTTP(S), the live preview renders
 
 ```
 n8n-workflow-templates/
+├── index.html           # homepage — lists all templates
 ├── README.md
 ├── LICENSE
 └── templates/
+    ├── index.html       # redirects back to the homepage
     └── daily-digest/
         ├── index.html      # GitHub Pages documentation + live preview
         ├── workflow.json    # importable, PII-free workflow
