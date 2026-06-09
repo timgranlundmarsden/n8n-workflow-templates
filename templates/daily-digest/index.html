@@ -119,6 +119,8 @@
   .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 36px -16px rgba(28,23,20,.8)}
   .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
   .btn-ghost:hover{border-color:var(--ink);background:#fff8}
+  .btn-ghost.copied{border-color:var(--coral);color:var(--coral-deep);background:#fff4f6}
+  #copy-wf{font-family:inherit}
 
   /* staggered entrance */
   .reveal{opacity:0;transform:translateY(14px);animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards}
@@ -144,7 +146,7 @@
       linear-gradient(var(--coral),var(--coral)) 100% 100%/1px 14px no-repeat;
     opacity:.5;
   }
-  n8n-demo{display:block;width:100%;height:min(80vh,820px);min-height:520px}
+  n8n-demo{display:block;width:100%;height:auto;min-height:clamp(360px,48vh,520px);--n8n-workflow-min-height:clamp(360px,48vh,520px)}
   #wf-fallback{display:none;padding:48px 26px;text-align:center;color:var(--ink-soft)}
   #wf-fallback a{color:var(--coral-deep);font-weight:700}
   #wf-loading{
@@ -304,6 +306,10 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/></svg>
           Download workflow.json
         </a>
+        <button type="button" class="btn btn-ghost" id="copy-wf" aria-live="polite">
+          <svg id="copy-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          <span id="copy-label">Copy workflow.json</span>
+        </button>
         <a class="btn btn-ghost" href="#setup">Read the setup guide →</a>
       </div>
     </div>
@@ -568,7 +574,9 @@
 
 <script>
   // Load the (PII-free) workflow JSON and hand it to the read-only preview component.
-  // The component URL-decodes its `workflow` attribute, so we encode before setting it.
+  // The component's loadWorkflow() does JSON.parse(this.workflow), so it expects RAW
+  // JSON in the attribute (it only URL-decodes once, in connectedCallback, and only
+  // for values starting with "%7B%" — which never fires for an attribute we set later).
   (function () {
     var el = document.getElementById('wf');
     var loading = document.getElementById('wf-loading');
@@ -580,14 +588,76 @@
       if (fallback) fallback.style.display = 'block';
     }
 
-    fetch('workflow.json', { cache: 'no-cache' })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (json) {
-        el.setAttribute('workflow', encodeURIComponent(JSON.stringify(json)));
+    // The <n8n-demo> bundle is an ES module that self-registers the element.
+    // Wait until it's defined (so the property is applied on a live element),
+    // then fetch the workflow and hand it over (encoded — the component decodes it).
+    // Resolve when the element registers, but don't hang forever if the
+    // CDN bundle fails to load — time out so the fallback can show.
+    var defined = window.customElements
+      ? Promise.race([
+          customElements.whenDefined('n8n-demo'),
+          new Promise(function (_, reject) {
+            setTimeout(function () { reject(new Error('n8n-demo timeout')); }, 8000);
+          })
+        ])
+      : Promise.reject(new Error('no customElements'));
+
+    Promise.all([
+      defined,
+      fetch('workflow.json', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    ])
+      .then(function (res) {
+        el.setAttribute('workflow', JSON.stringify(res[1]));
         // Give the web component a moment to render, then drop the loading overlay.
         setTimeout(function () { if (loading) loading.style.display = 'none'; }, 1200);
       })
       .catch(fail);
+  })();
+
+  // "Copy workflow.json" — copies the raw JSON so it can be pasted straight into n8n.
+  (function () {
+    var btn = document.getElementById('copy-wf');
+    var label = document.getElementById('copy-label');
+    if (!btn || !label) return;
+    var original = label.textContent;
+    var resetT;
+
+    function flash(msg, ok) {
+      label.textContent = msg;
+      btn.classList.toggle('copied', ok !== false);
+      clearTimeout(resetT);
+      resetT = setTimeout(function () {
+        label.textContent = original;
+        btn.classList.remove('copied');
+      }, 1800);
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function (resolve, reject) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error('execCommand failed'));
+      });
+    }
+
+    btn.addEventListener('click', function () {
+      fetch('workflow.json', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+        .then(copyText)
+        .then(function () { flash('Copied to clipboard'); })
+        .catch(function () { flash('Copy failed — use Download', false); });
+    });
   })();
 </script>
 </body>
